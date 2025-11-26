@@ -6,8 +6,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-import plotly.express as px
-import plotly.graph_objects as go
+
+# Plotly imports with error handling
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    st.warning("Plotly is not installed. Some visualizations may not be available. Install with: pip install plotly")
+
 from sklearn.decomposition import PCA
 
 # Page configuration
@@ -138,18 +146,21 @@ if model is not None:
             st.dataframe(scores_df, use_container_width=True)
 
             # Visualize prediction
-            fig = go.Figure(data=[
-                go.Bar(x=target_names, y=prediction_proba,
-                      marker_color=['green' if i == prediction else 'lightblue'
-                                   for i in range(len(target_names))])
-            ])
-            fig.update_layout(
-                title="Decision Function Scores",
-                xaxis_title="Species",
-                yaxis_title="Score",
-                height=400
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            if PLOTLY_AVAILABLE:
+                fig = go.Figure(data=[
+                    go.Bar(x=target_names, y=prediction_proba,
+                          marker_color=['green' if i == prediction else 'lightblue'
+                                       for i in range(len(target_names))])
+                ])
+                fig.update_layout(
+                    title="Decision Function Scores",
+                    xaxis_title="Species",
+                    yaxis_title="Score",
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Install Plotly to see interactive visualizations: `pip install plotly`")
 
     # Tab 2: Dataset Explorer
     with tab2:
