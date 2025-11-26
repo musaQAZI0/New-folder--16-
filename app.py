@@ -13,6 +13,8 @@ try:
     import plotly.graph_objects as go
     PLOTLY_AVAILABLE = True
 except ImportError:
+    px = None  # type: ignore
+    go = None  # type: ignore
     PLOTLY_AVAILABLE = False
     st.warning("Plotly is not installed. Some visualizations may not be available. Install with: pip install plotly")
 
@@ -72,7 +74,7 @@ st.sidebar.write("""
 - 4 features (Sepal & Petal measurements)
 """)
 
-if model is not None:
+if model is not None and scaler is not None and feature_names is not None and target_names is not None:
     # Create tabs
     tab1, tab2, tab3, tab4 = st.tabs(["🔮 Prediction", "📊 Dataset Explorer", "📈 Visualization", "ℹ️ About SVM"])
 
@@ -146,7 +148,7 @@ if model is not None:
             st.dataframe(scores_df, use_container_width=True)
 
             # Visualize prediction
-            if PLOTLY_AVAILABLE:
+            if PLOTLY_AVAILABLE and go is not None:
                 fig = go.Figure(data=[
                     go.Bar(x=target_names, y=prediction_proba,
                           marker_color=['green' if i == prediction else 'lightblue'
@@ -186,9 +188,12 @@ if model is not None:
 
             st.write("### Class Distribution")
             species_counts = df['species_name'].value_counts()
-            fig = px.pie(values=species_counts.values, names=species_counts.index,
-                        title="Iris Species Distribution")
-            st.plotly_chart(fig, use_container_width=True)
+            if PLOTLY_AVAILABLE and px is not None:
+                fig = px.pie(values=species_counts.values, names=species_counts.index,
+                            title="Iris Species Distribution")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.bar_chart(species_counts)
 
         except FileNotFoundError:
             st.warning("Dataset file not found. Please run train_model.py first!")
@@ -204,27 +209,33 @@ if model is not None:
             col1, col2 = st.columns(2)
 
             with col1:
-                feature_x = st.selectbox("Select X-axis feature", feature_names, index=0)
+                feature_x = st.selectbox("Select X-axis feature", list(feature_names), index=0)
             with col2:
-                feature_y = st.selectbox("Select Y-axis feature", feature_names, index=1)
+                feature_y = st.selectbox("Select Y-axis feature", list(feature_names), index=1)
 
-            fig = px.scatter(df, x=feature_x, y=feature_y, color='species_name',
-                           title=f"{feature_x} vs {feature_y}",
-                           labels={'species_name': 'Species'})
-            st.plotly_chart(fig, use_container_width=True)
+            if PLOTLY_AVAILABLE and px is not None:
+                fig = px.scatter(df, x=feature_x, y=feature_y, color='species_name',
+                               title=f"{feature_x} vs {feature_y}",
+                               labels={'species_name': 'Species'})
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Install Plotly to see interactive scatter plot: `pip install plotly`")
 
             st.write("### PCA Visualization")
-            X = df[feature_names]
+            X = df[list(feature_names)].values
             pca = PCA(n_components=2)
             X_pca = pca.fit_transform(X)
 
             df_pca = pd.DataFrame(data=X_pca, columns=['PC1', 'PC2'])
             df_pca['species'] = df['species_name']
 
-            fig = px.scatter(df_pca, x='PC1', y='PC2', color='species',
-                           title='PCA: First Two Principal Components',
-                           labels={'species': 'Species'})
-            st.plotly_chart(fig, use_container_width=True)
+            if PLOTLY_AVAILABLE and px is not None:
+                fig = px.scatter(df_pca, x='PC1', y='PC2', color='species',
+                               title='PCA: First Two Principal Components',
+                               labels={'species': 'Species'})
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Install Plotly to see interactive PCA plot: `pip install plotly`")
 
             st.write(f"**Explained Variance:** PC1: {pca.explained_variance_ratio_[0]:.2%}, PC2: {pca.explained_variance_ratio_[1]:.2%}")
 
